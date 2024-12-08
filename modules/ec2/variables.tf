@@ -22,3 +22,8 @@ variable "ami_id" {
   description = "The ID of the Amazon Machine Image (AMI) to use for the EC2 instance"
   type        = string
 }
+
+variable "sqs_queue_url" {
+  description = "The URL of the SQS queue"
+  type        = string
+}

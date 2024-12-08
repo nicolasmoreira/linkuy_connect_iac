@@ -5,6 +5,13 @@ resource "aws_lambda_function" "data_processor" {
   role             = var.lambda_exec_role_arn
   handler          = "index.handler"
   runtime          = var.nodejs_runtime
+
+  environment {
+    variables = {
+      RDS_ENDPOINT = var.rds_endpoint
+      SQS_QUEUE_URL = var.sqs_queue_url
+    }
+  }
 }
 
 
