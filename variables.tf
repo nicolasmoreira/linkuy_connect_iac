@@ -1,109 +1,115 @@
+# ==============================
+# AWS Provider Configuration
+# ==============================
 variable "profile" {
-  description = "AWS profile to use"
-  type = string
+  description = "AWS CLI profile to use"
+  type        = string
 }
 
 variable "region" {
-  description = "AWS region to deploy resources"
-  type = string
+  description = "AWS region where resources will be created"
+  type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID for the network where resources will be deployed"
-  type = string
+variable "environment" {
+  description = "Environment (dev, staging, production)"
+  type        = string
 }
 
-variable "vpc_cidr_block" {
-  description = "VPC CIDR block"
-  type = string
-}
-
-variable "public_cidr_block" {
-  description = "Public CIDR block"
-  type = string
-}
-
-variable "public_subnet_id" {
-  description = "Public subnet ID to use for RDS and EC2 instances"
-  type = string
-}
-
-variable "security_group_id" {
-  description = "Security Group ID to associate with instances"
-  type = string
+# ==============================
+# RDS Configuration
+# ==============================
+variable "db_family" {
+  description = "Database engine family for RDS (e.g., postgres16)"
+  type        = string
 }
 
 variable "db_instance_identifier" {
-  description = "The identifier for the RDS instance"
-  type = string
+  description = "Identifier for the RDS instance"
+  type        = string
 }
 
-variable "db_instance_class" {
-  description = "The instance class to use for the RDS instance"
-  type = string
+variable "rds_engine" {
+  description = "Engine for the RDS instance (e.g., postgres, mysql, etc.)"
+  type        = string
 }
 
-variable "db_engine" {
-  description = "The engine to use for the RDS instance"
-  type = string
+variable "rds_engine_version" {
+  description = "Version of the RDS engine"
+  type        = string
 }
 
-variable "db_engine_version" {
-  description = "The engine version for the RDS instance"
-  type = string
-}
-
-variable "db_username" {
-  description = "The username for the RDS instance"
-  type = string
-}
-
-variable "db_password" {
-  description = "The password for the RDS instance"
-  type = string
+variable "rds_instance_class" {
+  description = "The instance class for the RDS instance"
+  type        = string
 }
 
 variable "db_allocated_storage" {
-  description = "The storage size for the RDS instance in GB"
-  type = number
+  description = "The amount of storage (in GB) to allocate for the RDS instance"
+  type        = number
 }
 
-variable "db_subnet_group_name" {
-  description = "The name of the RDS subnet group"
-  type = string
+variable "db_username" {
+  description = "Username for the RDS instance"
+  type        = string
 }
 
-variable "ec2_instance_type" {
-  description = "EC2 instance type"
-  type = string
+variable "db_password" {
+  description = "Password for the RDS instance"
+  type        = string
+  sensitive   = true
 }
 
-variable "ami_id" {
-  description = "The ID of the Amazon Machine Image (AMI) to use for the EC2 instance"
-  type = string
+variable "db_parameter_group_name" {
+  description = "Name of the RDS parameter group"
+  type        = string
 }
 
-variable "lambda_exec_role_arn" {
-  description = "The ARN of the Lambda execution role"
-  type = string
+variable "db_encryption_enabled" {
+  description = "If true, enables encryption on the RDS instance"
+  type        = bool
 }
 
-variable "nodejs_runtime" {
-  description = "The runtime to use for the Lambda function"
-  type = string
+# ==============================
+# Lambda Configuration
+# ==============================
+variable "lambda_function_name" {
+  description = "Name of the Lambda function"
+  type        = string
 }
 
+variable "lambda_handler" {
+  description = "Handler of the Lambda function"
+  type        = string
+}
+
+variable "lambda_zip_path" {
+  description = "Path to the ZIP file containing the Lambda function code"
+  type        = string
+}
+
+variable "runtime" {
+  description = "Runtime for the Lambda function (e.g., nodejs18.x, python3.9)"
+  type        = string
+}
+
+# ==============================
+# SQS Configuration
+# ==============================
 variable "sqs_queue_name" {
   description = "Name of the SQS queue"
   type        = string
 }
 
-variable "sqs_visibility_timeout" {
-  description = "Visibility timeout for the SQS queue"
-  type        = number
+# ==============================
+# EC2 Configuration
+# ==============================
+variable "ec2_instance_type" {
+  description = "Type of EC2 instance (e.g., t4g.micro, t3.micro, etc.)"
+  type        = string
 }
 
-variable "sqs_message_retention_seconds" {
-  description = "Retention period for SQS messages (in seconds)"
-  type        = number
+variable "ami_id" {
+  description = "AMI ID for the EC2 instance"
+  type        = string
 }
