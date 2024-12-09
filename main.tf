@@ -34,29 +34,6 @@ data "aws_security_group" "default" {
   }
 }
 
-# ===== IAM Role for Lambda =====
-resource "aws_iam_role" "lambda_exec_role" {
-  name = "linkuyconnect-lambda-execution-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution_policy" {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
@@ -100,21 +77,24 @@ module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.16.0"
 
-  function_name = var.lambda_function_name
-  handler       = var.lambda_handler
-  runtime       = var.lambda_runtime
-  source_path   = var.lambda_zip_path
-  publish       = true
-  create_role   = true
+  function_name  = var.lambda_function_name
+  handler        = var.lambda_handler
+  runtime        = var.lambda_runtime
+  source_path    = var.lambda_zip_path
+  create_package = true
+  publish        = true
+  create_role    = true
+  timeout        = 30
 
   cloudwatch_logs_retention_in_days = 30
 
   environment_variables = {
-    DB_HOST     = module.rds.db_instance_endpoint
-    DB_NAME     = var.db_name
-    DB_USER     = var.db_username
-    DB_PASS     = var.db_password
-    ENVIRONMENT = var.environment
+    DB_HOST       = module.rds.db_instance_endpoint
+    DB_NAME       = var.db_name
+    DB_USER       = var.db_username
+    DB_PASS       = var.db_password
+    SQS_QUEUE_URL = module.sqs.queue_url
+    ENVIRONMENT   = var.environment
   }
 
   policy_statements = {

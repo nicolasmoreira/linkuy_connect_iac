@@ -4,6 +4,7 @@
     "description": "LinkuyConnect Lambda Function",
     "main": "index.js",
     "dependencies": {
+        "aws-sdk": "^2.1692.0",
         "pg": "^8.10.0"
     }
 }
