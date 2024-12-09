@@ -1,4 +1,6 @@
-# ===== PROVIDER =====
+# ==============================
+# AWS Provider Configuration
+# ==============================
 provider "aws" {
   region  = var.region
   profile = var.profile
@@ -58,10 +60,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution_policy" {
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
-# ===== RDS Database Configuration =====
+# ==============================
+# RDS Configuration
+# ==============================
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
-  version = ">= 4.16.0"
+  version = "6.10.0"
 
   identifier             = var.db_instance_identifier
   family                 = var.db_family
@@ -89,22 +93,29 @@ resource "aws_db_parameter_group" "timescaledb" {
   }
 }
 
-# ===== Lambda Function Configuration =====
+# ==============================
+# Lambda Configuration
+# ==============================
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = ">= 3.8.0"
+  version = "7.16.0"
 
   function_name = var.lambda_function_name
   handler       = var.lambda_handler
   runtime       = var.runtime
   source_path   = var.lambda_zip_path
-
-  lambda_role = aws_iam_role.lambda_exec_role.arn
+  publish       = true
+  create_role   = true
 
   environment_variables = {
     DB_HOST = module.rds.db_instance_endpoint
+    DB_NAME = var.db_name
     DB_USER = var.db_username
     DB_PASS = var.db_password
+  }
+
+  tags = {
+    Environment = var.environment
   }
 }
 
@@ -116,20 +127,28 @@ resource "aws_lambda_permission" "allow_apigw_invoke" {
   source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${module.api_gateway.api_id}/*/*"
 }
 
-# ===== SQS Queue Configuration =====
+# ==============================
+# SQS Configuration
+# ==============================
 module "sqs" {
   source  = "terraform-aws-modules/sqs/aws"
-  version = ">= 2.0.0"
+  version = "4.2.1"
 
-  name                       = var.sqs_queue_name
-  visibility_timeout_seconds = 30
-  message_retention_seconds  = 86400
+  name       = var.sqs_queue_name
+  create     = true
+  fifo_queue = false
+
+  tags = {
+    Environment = var.environment
+  }
 }
 
-# ===== API Gateway Configuration =====
+# ==============================
+# API Gateway Configuration
+# ==============================
 module "api_gateway" {
   source  = "terraform-aws-modules/apigateway-v2/aws"
-  version = ">= 5.2.1"
+  version = "5.2.1"
 
   name               = "linkuyconnect-api"
   protocol_type      = "HTTP"
@@ -170,17 +189,18 @@ module "api_gateway" {
   }
 }
 
-
 resource "aws_api_gateway_api_key" "linkuyconnect_api_key" {
   name        = "linkuyconnect-api-key"
   enabled     = true
   description = "API Key for /activity route"
 }
 
-# ===== EC2 Worker Instance Configuration =====
-module "ec2" {
+# ==============================
+# EC2 Instance Configuration
+# ==============================
+module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
-  version = ">= 3.0.0"
+  version = "5.7.1"
 
   name                   = "linkuyconnect-worker"
   instance_type          = var.ec2_instance_type
