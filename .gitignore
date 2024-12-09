@@ -1,3 +1,6 @@
+# ==============================
+# Terraform
+# ==============================
 # Local .terraform directories
 **/.terraform/*
 
@@ -9,15 +12,11 @@
 crash.log
 crash.*.log
 
-# Exclude all .tfvars files, which are likely to contain sensitive data, such as
-# password, private keys, and other secrets. These should not be part of version 
-# control as they are data points which are potentially sensitive and subject 
-# to change depending on the environment.
+# Ignore tfvars files, as they often contain secrets
 *.tfvars
 *.tfvars.json
 
-# Ignore override files as they are usually used to override resources locally and so
-# are not checked in
+# Ignore override files (local overrides)
 override.tf
 override.tf.json
 *_override.tf
@@ -26,12 +25,127 @@ override.tf.json
 # Ignore transient lock info files created by terraform apply
 .terraform.tfstate.lock.info
 
-# Include override files you do wish to add to version control using negated pattern
-# !example_override.tf
-
-# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
-# example: *tfplan*
-
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ignore tfplan files (created by `terraform plan -out=tfplan`)
+*.tfplan
+
+# ==============================
+# Node.js and npm
+# ==============================
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# ==============================
+# Lambda Function 
+# ==============================
+# Ignore compiled and bundled files
+dist/
+build/
+tmp/
+coverage/
+.idea/
+
+# Ignore local ZIP files for Lambda deployments
+lambda.zip
+*.zip
+
+# Ignore AWS SAM files
+.aws-sam/
+
+# AWS credentials (if accidentally created in the repo)
+.aws/credentials
+.aws/config
+
+# Local editor/IDE configurations
+.vscode/
+*.swp
+*.swo
+
+# Ignore lock files for package managers
+package-lock.json
+yarn.lock
+
+# Ignore local environment files (secrets and environment variables)
+.env
+.env.*
+*.env
+
+# ==============================
+# AWS Configurations
+# ==============================
+# AWS credentials and configuration
+credentials
+config
+
+# AWS SAM CLI and CloudFormation artifacts
+.aws-sam/
+*.template.yaml
+*.template.yml
+
+# AWS CloudFormation JSON and YAML files
+*.stack.yml
+*.stack.json
+*.stack.yaml
+
+# AWS deployment packages
+*.zip
+
+# AWS Lambda Test Event files
+event.json
+
+# ==============================
+# Editor Configurations
+# ==============================
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+
+# VS Code settings
+.vscode/*
+history/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim temporary files
+*.swp
+*.swo
+
+# Emacs backup files
+*~
+
+# ==============================
+# Miscellaneous
+# ==============================
+# MacOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
+desktop.ini
+
+# Local configuration files
+*.local
+*.local.*

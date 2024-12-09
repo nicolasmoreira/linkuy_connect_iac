@@ -93,7 +93,7 @@ variable "lambda_zip_path" {
   type        = string
 }
 
-variable "runtime" {
+variable "lambda_runtime" {
   description = "Runtime for the Lambda function (e.g., nodejs18.x, python3.9)"
   type        = string
 }

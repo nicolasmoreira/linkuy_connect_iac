@@ -2,11 +2,10 @@
 
 const { Client } = require('pg'); // PostgreSQL client for TimescaleDB
 const AWS = require('aws-sdk'); // AWS SDK for SQS
-const crypto = require('crypto'); // For simple security measures like generating hashes
 
 // SQS and RDS configurations are loaded from environment variables
 const sqs = new AWS.SQS({ region: process.env.AWS_REGION });
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = `postgresql://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/${process.env.DB_NAME}`;
 const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL;
 
 // Thresholds for anomaly detection
@@ -18,11 +17,6 @@ exports.handler = async (event) => {
         // Parse the incoming request body
         const payload = JSON.parse(event.body);
         
-        // Validate the API Key (if required)
-        if (!isValidApiKey(event.headers['x-api-key'])) {
-            return createResponse(403, { error: 'Invalid API Key' });
-        }
-
         // Validate and sanitize the payload
         const validationErrors = validatePayload(payload);
         if (validationErrors.length > 0) {
@@ -47,17 +41,6 @@ exports.handler = async (event) => {
         return createResponse(500, { error: 'Internal Server Error' });
     }
 };
-
-/**
- * Validate the API key (optional, can be configured if needed).
- * @param {string} apiKey 
- * @returns {boolean}
- */
-function isValidApiKey(apiKey) {
-    // You can extend this logic to fetch API keys from a database or cache
-    const validApiKeys = process.env.VALID_API_KEYS.split(',');
-    return validApiKeys.includes(apiKey);
-}
 
 /**
  * Validates the incoming payload to ensure required fields are present.
@@ -100,7 +83,7 @@ async function insertIntoTimescaleDB(payload) {
             payload.steps_count,
             payload.location.latitude,
             payload.location.longitude,
-            payload.location.accuracy_meters
+            payload.location.accuracy_meters || null
         ];
 
         await client.query(query, values);
@@ -117,7 +100,7 @@ async function insertIntoTimescaleDB(payload) {
  * Detects anomalies in the user's activity.
  * Examples:
  * - Prolonged inactivity
- * - Fall detection based on location data (if available)
+ * - Fall detection based on activity type
  * 
  * @param {object} payload 
  * @returns {array} List of anomaly events

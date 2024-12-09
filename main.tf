@@ -36,7 +36,7 @@ data "aws_security_group" "default" {
 
 # ===== IAM Role for Lambda =====
 resource "aws_iam_role" "lambda_exec_role" {
-  name = "AWSLambdaBasicExecutionRole"
+  name = "linkuyconnect-lambda-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -102,16 +102,32 @@ module "lambda" {
 
   function_name = var.lambda_function_name
   handler       = var.lambda_handler
-  runtime       = var.runtime
+  runtime       = var.lambda_runtime
   source_path   = var.lambda_zip_path
   publish       = true
   create_role   = true
 
+  cloudwatch_logs_retention_in_days = 30
+
   environment_variables = {
-    DB_HOST = module.rds.db_instance_endpoint
-    DB_NAME = var.db_name
-    DB_USER = var.db_username
-    DB_PASS = var.db_password
+    DB_HOST     = module.rds.db_instance_endpoint
+    DB_NAME     = var.db_name
+    DB_USER     = var.db_username
+    DB_PASS     = var.db_password
+    ENVIRONMENT = var.environment
+  }
+
+  policy_statements = {
+    SQSAccess = {
+      effect    = "Allow"
+      actions   = ["sqs:SendMessage"]
+      resources = ["arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"]
+    }
+    RDSAccess = {
+      effect    = "Allow"
+      actions   = ["rds-db:connect"]
+      resources = ["arn:aws:rds-db:${var.region}:${data.aws_caller_identity.current.account_id}:dbuser:${module.rds.db_instance_endpoint}/*"]
+    }
   }
 
   tags = {

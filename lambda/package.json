@@ -1,0 +1,9 @@
+{
+    "name": "linkuyconnect-lambda",
+    "version": "1.0.0",
+    "description": "LinkuyConnect Lambda Function",
+    "main": "index.js",
+    "dependencies": {
+        "pg": "^8.10.0"
+    }
+}
