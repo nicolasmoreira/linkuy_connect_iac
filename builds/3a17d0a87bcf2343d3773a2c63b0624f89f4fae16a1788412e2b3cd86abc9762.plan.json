@@ -1,1 +1,0 @@
-{"filename": "builds/3a17d0a87bcf2343d3773a2c63b0624f89f4fae16a1788412e2b3cd86abc9762.zip", "runtime": "nodejs18.x", "artifacts_dir": "builds", "build_plan": [[["npm", "nodejs18.x", "./lambda/package.json", null, null], ["zip", "./lambda", null]]]}
