@@ -27,19 +27,54 @@ data "aws_subnets" "default" {
 }
 
 # ===== Security Groups =====
-data "aws_security_group" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-sg-linkuyconnect"
+  description = "Security Group for RDS LinkuyConnect"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "PostgreSQL port for TimescaleDB"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_ips
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "ec2-sg-linkuyconnect"
+  description = "Security Group for EC2 LinkuyConnect Worker"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "Allow SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_ips
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
-# ==============================
 # RDS Configuration
-# ==============================
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "6.10.0"
@@ -50,12 +85,18 @@ module "rds" {
   engine_version         = var.rds_engine_version
   instance_class         = var.rds_instance_class
   allocated_storage      = var.db_allocated_storage
+  apply_immediately      = true
   username               = var.db_username
   password               = var.db_password
+  skip_final_snapshot    = true
+  deletion_protection    = false
   subnet_ids             = data.aws_subnets.default.ids
-  vpc_security_group_ids = [data.aws_security_group.default.id]
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
   storage_encrypted      = var.db_encryption_enabled
-  publicly_accessible    = false
+  publicly_accessible    = true
+
+  create_db_option_group    = false
+  create_db_parameter_group = false
 }
 
 # ===== RDS Parameter Group =====
@@ -70,9 +111,7 @@ resource "aws_db_parameter_group" "timescaledb" {
   }
 }
 
-# ==============================
 # Lambda Configuration
-# ==============================
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.16.0"
@@ -191,9 +230,7 @@ resource "aws_api_gateway_api_key" "linkuyconnect_api_key" {
   description = "API Key for /activity route"
 }
 
-# ==============================
 # EC2 Instance Configuration
-# ==============================
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.7.1"
@@ -202,7 +239,7 @@ module "ec2_instance" {
   instance_type          = var.ec2_instance_type
   ami                    = var.ami_id
   subnet_id              = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids = [data.aws_security_group.default.id]
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   associate_public_ip_address = true
 

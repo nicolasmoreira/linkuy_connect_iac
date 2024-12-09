@@ -118,3 +118,12 @@ variable "ami_id" {
   description = "AMI ID for the EC2 instance"
   type        = string
 }
+
+# ==============================
+# IPs Configuration
+# ==============================
+variable "allowed_ips" {
+  description = "List of IP addresses allowed to access the EC2 via SSH and RDS via PostgreSQL port."
+  type        = list(string)
+  default     = ["167.56.155.28/32"]
+}

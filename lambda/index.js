@@ -16,11 +16,10 @@ let client;
 /**
  * Handler principal de la Lambda
  */
-exports.handler = async (event) => {
+exports.handler = async (payload) => {
     try {
         validateEnvVariables();
 
-        const payload = parseRequestBody(event);
         validatePayload(payload);
 
         await connectToTimescaleDB();
@@ -46,19 +45,6 @@ exports.handler = async (event) => {
         // await closeTimescaleDBConnection();
     }
 };
-
-/**
- * Analiza y valida el cuerpo de la solicitud
- * @param {string} body 
- * @returns {object} parsed payload
- */
-function parseRequestBody(body) {
-    try {
-        return JSON.parse(body);
-    } catch (error) {
-        throw new Error('Invalid JSON payload.');
-    }
-}
 
 /**
  * Valida las variables de entorno necesarias
