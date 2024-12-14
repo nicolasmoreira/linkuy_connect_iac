@@ -1,0 +1,45 @@
+# ==============================
+# AWS Provider Configuration
+# ==============================
+profile     = "linkuyconnect"
+region      = "us-east-2"
+environment = "dev"
+
+# ==============================
+# RDS Configuration
+# ==============================
+db_instance_identifier  = "linkuyconnect-db"
+rds_engine              = "postgres"
+rds_engine_version      = "16.3"
+rds_instance_class      = "db.t4g.micro"
+db_allocated_storage    = 20
+db_family               = "postgres16"
+db_name                 = "linkuyconnect"
+db_username             = "linkuyconnect"
+db_password             =
+db_parameter_group_name = "linkuyconnect-timescaledb-pg"
+db_encryption_enabled   = false
+
+# ==============================
+# Lambda Configuration
+# ==============================
+lambda_function_name = "data_processor"
+lambda_handler       = "index.handler"
+lambda_zip_path      = "./lambda"
+lambda_runtime       = "nodejs22.x"
+
+# ==============================
+# SQS Configuration
+# ==============================
+sqs_queue_name = "linkuyconnect-activity"
+
+# ==============================
+# EC2 Configuration
+# ==============================
+ec2_instance_type = "t2.micro"
+ami_id            = "ami-0c80e2b6ccb9ad6d1"
+
+# ==============================
+# Others
+# ==============================
+allowed_ips =

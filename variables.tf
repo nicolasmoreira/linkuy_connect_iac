@@ -125,5 +125,4 @@ variable "ami_id" {
 variable "allowed_ips" {
   description = "List of IP addresses allowed to access the EC2 via SSH and RDS via PostgreSQL port."
   type        = list(string)
-  default     = ["167.56.155.28/32"]
 }
