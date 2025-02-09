@@ -74,7 +74,7 @@ resource "aws_security_group" "ec2_sg" {
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
-# RDS Configuration
+# ===== RDS Configuration =====
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "6.10.0"
@@ -96,24 +96,9 @@ module "rds" {
   vpc_security_group_ids      = [aws_security_group.rds_sg.id]
   storage_encrypted           = var.db_encryption_enabled
   publicly_accessible         = true
-
-  create_db_option_group    = false
-  create_db_parameter_group = false
 }
 
-# ===== RDS Parameter Group =====
-resource "aws_db_parameter_group" "timescaledb" {
-  name   = var.db_parameter_group_name
-  family = var.db_family
-
-  parameter {
-    name         = "shared_preload_libraries"
-    value        = "pg_stat_statements,pg_cron"
-    apply_method = "pending-reboot"
-  }
-}
-
-# Lambda Configuration
+# ===== Lambda Configuration =====
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.16.0"
@@ -126,8 +111,6 @@ module "lambda" {
   publish        = true
   create_role    = true
   timeout        = 30
-
-  cloudwatch_logs_retention_in_days = 30
 
   environment_variables = {
     DB_HOST       = module.rds.db_instance_endpoint
@@ -144,24 +127,7 @@ module "lambda" {
       actions   = ["sqs:SendMessage"]
       resources = ["arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"]
     }
-    RDSAccess = {
-      effect    = "Allow"
-      actions   = ["rds-db:connect"]
-      resources = ["arn:aws:rds-db:${var.region}:${data.aws_caller_identity.current.account_id}:dbuser:${module.rds.db_instance_endpoint}/*"]
-    }
   }
-
-  tags = {
-    Environment = var.environment
-  }
-}
-
-resource "aws_lambda_permission" "allow_apigw_invoke" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = module.lambda.lambda_function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${module.api_gateway.api_id}/*/*"
 }
 
 # ==============================
@@ -174,10 +140,28 @@ module "sqs" {
   name       = var.sqs_queue_name
   create     = true
   fifo_queue = false
+}
 
-  tags = {
-    Environment = var.environment
-  }
+# ==============================
+# SNS Configuration
+# ==============================
+module "sns" {
+  source  = "terraform-aws-modules/sns/aws"
+  version = "6.1.2"
+
+  name = var.sns_alerts_topic_name
+}
+
+resource "aws_sns_topic_subscription" "sqs_subscription" {
+  topic_arn = module.sns.topic_arn
+  protocol  = "sqs"
+  endpoint  = module.sqs.queue_arn
+}
+
+resource "aws_sns_topic_subscription" "http_subscription" {
+  topic_arn = module.sns.topic_arn
+  protocol  = "https"
+  endpoint  = "https://${module.ec2_instance.public_ip}/worker/sqs"
 }
 
 # ==============================
@@ -202,16 +186,6 @@ module "api_gateway" {
         payload_format_version = "2.0"
       }
     }
-
-    "$default" = {
-      authorization_type = "NONE"
-
-      integration = {
-        type                   = "AWS_PROXY"
-        uri                    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.lambda.lambda_function_arn}/invocations"
-        payload_format_version = "2.0"
-      }
-    }
   }
 
   cors_configuration = {
@@ -219,20 +193,11 @@ module "api_gateway" {
     allow_methods = ["GET", "POST", "OPTIONS"]
     allow_headers = ["Content-Type", "X-API-Key"]
   }
-
-  tags = {
-    Environment = var.environment
-    Project     = "LinkuyConnect"
-  }
 }
 
-resource "aws_api_gateway_api_key" "linkuyconnect_api_key" {
-  name        = "linkuyconnect-api-key"
-  enabled     = true
-  description = "API Key for /activity route"
-}
-
-# EC2 Instance Configuration
+# ==============================
+# EC2 Configuration
+# ==============================
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.7.1"
@@ -244,8 +209,4 @@ module "ec2_instance" {
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   associate_public_ip_address = true
-
-  tags = {
-    Name = "linkuyconnect-worker"
-  }
 }

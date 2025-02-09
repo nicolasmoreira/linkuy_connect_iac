@@ -12,9 +12,10 @@ LinkuyConnect is an open-source project designed to enable families to easily se
 - **VPC**: Default VPC and subnets.
 - **RDS**: Managed PostgreSQL instance with TimescaleDB extensions.
 - **Lambda**: For serverless function execution.
-- **SQS**: Message queuing service.
+- **SQS**: Message queuing service for async processing.
+- **SNS**: Simple Notification Service for alerts and event-driven messaging.
 - **API Gateway**: HTTP API for frontend-backend communication.
-- **EC2**: Optional worker instance for processing SQS messages.
+- **EC2**: Worker instance for processing SQS messages asynchronously.
 
 ### File Structure
 ```plaintext
@@ -46,7 +47,7 @@ LinkuyConnect is an open-source project designed to enable families to easily se
    ```
 
 2. **Configure Variables**
-   Update `terraform.tfvars` with your environment-specific values
+   Update `terraform.tfvars` with your environment-specific values.
 
 3. **Initialize Terraform**
    ```bash
@@ -64,8 +65,10 @@ LinkuyConnect is an open-source project designed to enable families to easily se
    ```
 
 6. **Access Resources**
-   - API Gateway: Access endpoints via the generated API Gateway URL.
-   - RDS: Connect to the TimescaleDB instance using the provided credentials.
+   - **API Gateway**: Access endpoints via the generated API Gateway URL.
+   - **RDS**: Connect to the TimescaleDB instance using the provided credentials.
+   - **SQS**: Verify message processing via the configured queue.
+   - **SNS**: Monitor event-driven alerts and notifications.
 
 ## Environment Variables for Lambda
 
@@ -75,6 +78,7 @@ The following environment variables are configured for Lambda functions:
 - `DB_USER`: Database username
 - `DB_PASS`: Database password
 - `SQS_QUEUE_URL`: SQS queue URL
+- `SNS_TOPIC_ARN`: SNS topic ARN for notifications
 - `ENVIRONMENT`: Deployment environment (e.g., `dev`, `prod`)
 
 ## Contributing

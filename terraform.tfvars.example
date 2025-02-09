@@ -31,7 +31,14 @@ lambda_runtime       = "nodejs22.x"
 # ==============================
 # SQS Configuration
 # ==============================
-sqs_queue_name = "linkuyconnect-activity"
+sqs_queue_name                 = "linkuyconnect-activity"
+sqs_message_retention_seconds  = 86400
+sqs_visibility_timeout_seconds = 30
+
+# ==============================
+# SNS Topic
+# ==============================
+sns_alerts_topic_name = "linkuyconnect-alerts-topic"
 
 # ==============================
 # EC2 Configuration
@@ -40,6 +47,16 @@ ec2_instance_type = "t2.micro"
 ami_id            = "ami-0c80e2b6ccb9ad6d1"
 
 # ==============================
+# API Gateway Configuration
+# ==============================
+api_gateway_name = "linkuyconnect-api"
+
+# ==============================
+# Webhook Configuration
+# ==============================
+symfony_webhook_url = "https://your-ec2-instance-url/worker/sqs"
+
+# ==============================
 # Others
 # ==============================
-allowed_ips =
+allowed_ips = ["0.0.0.0/0"]

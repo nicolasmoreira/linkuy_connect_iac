@@ -94,7 +94,7 @@ variable "lambda_zip_path" {
 }
 
 variable "lambda_runtime" {
-  description = "Runtime for the Lambda function (e.g., nodejs18.x, python3.9)"
+  description = "Runtime for the Lambda function (e.g., nodejs22.x, python3.9)"
   type        = string
 }
 
@@ -103,6 +103,26 @@ variable "lambda_runtime" {
 # ==============================
 variable "sqs_queue_name" {
   description = "Name of the SQS queue"
+  type        = string
+}
+
+variable "sqs_message_retention_seconds" {
+  description = "Time in seconds that SQS messages are kept before being deleted"
+  type        = number
+  default     = 86400
+}
+
+variable "sqs_visibility_timeout_seconds" {
+  description = "Visibility timeout for SQS messages in seconds"
+  type        = number
+  default     = 30
+}
+
+# ==============================
+# SNS Topic Configuration
+# ==============================
+variable "sns_alerts_topic_name" {
+  description = "Name of the SNS Topic"
   type        = string
 }
 
@@ -125,4 +145,20 @@ variable "ami_id" {
 variable "allowed_ips" {
   description = "List of IP addresses allowed to access the EC2 via SSH and RDS via PostgreSQL port."
   type        = list(string)
+}
+
+# ==============================
+# API Gateway Configuration
+# ==============================
+variable "api_gateway_name" {
+  description = "Name of the API Gateway"
+  type        = string
+}
+
+# ==============================
+# Miscellaneous
+# ==============================
+variable "symfony_webhook_url" {
+  description = "URL for the Symfony webhook worker"
+  type        = string
 }

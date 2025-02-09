@@ -1,4 +1,12 @@
 # ==============================
+# Outputs for EC2
+# ==============================
+output "ec2_public_ip" {
+  description = "Public IP of the EC2 instance"
+  value       = module.ec2_instance.public_ip
+}
+
+# ==============================
 # Outputs for RDS
 # ==============================
 output "rds_endpoint" {
@@ -30,5 +38,26 @@ output "lambda_arn" {
 # ==============================
 output "api_gateway_url" {
   description = "The API Gateway endpoint URL for LinkuyConnect"
-  value       = module.api_gateway.api_endpoint
+  value       = "${module.api_gateway.api_endpoint}/default"
+}
+
+# ==============================
+# Outputs for SNS
+# ==============================
+output "sns_alerts_topic_arn" {
+  description = "The ARN of the SNS topic for alerts"
+  value       = module.sns.topic_arn
+}
+
+# ==============================
+# Outputs for SQS
+# ==============================
+output "sqs_queue_arn" {
+  description = "The ARN of the SQS queue for LinkuyConnect"
+  value       = module.sqs.queue_arn
+}
+
+output "sqs_queue_url" {
+  description = "The URL of the SQS queue for LinkuyConnect"
+  value       = module.sqs.queue_url
 }
