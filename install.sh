@@ -19,10 +19,15 @@ SNS_TOPIC_ARN="${SNS_TOPIC_ARN}"
 mkdir -p /var/www
 
 # =====================================
-# Install PHP, PostgreSQL, Composer, and Nginx
+# Install Required Packages
 # =====================================
 dnf update -y
-dnf install -y php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium unzip git nginx
+dnf install -y \
+  php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium \
+  unzip git nginx
+
+# Configurar Git para que considere seguro el directorio del repositorio (evita error de "dubious ownership")
+git config --global --add safe.directory /var/www/linkuy_connect_services || true
 
 # =====================================
 # Configure PHP-FPM for Nginx
@@ -43,7 +48,7 @@ if [ -f /etc/php.d/10-opcache.ini ]; then
 fi
 
 # =====================================
-# Install Composer with Unlimited Memory
+# Install Composer
 # =====================================
 export COMPOSER_HOME=/root/.composer
 export COMPOSER_MEMORY_LIMIT=-1
@@ -100,7 +105,6 @@ EXPO_DSN="expo://TOKEN@default"
 ###< symfony/expo-notifier ###
 EOF
 
-# Restrict permissions on .env.prod (containing sensitive data)
 chown nginx:nginx /var/www/linkuy_connect_services/.env.prod
 chmod 600 /var/www/linkuy_connect_services/.env.prod
 
@@ -109,8 +113,6 @@ chmod 600 /var/www/linkuy_connect_services/.env.prod
 # =====================================
 export APP_ENV=prod
 export APP_DEBUG=0
-
-# Dump environment variables (generates a cached .env.local.php for improved performance)
 composer dump-env prod
 
 # =====================================
@@ -119,24 +121,30 @@ composer dump-env prod
 php bin/console cache:clear
 php bin/console cache:warmup
 
+# =====================================
 # Install assets and generate JWT keypair
+# =====================================
 php bin/console assets:install --symlink --relative
 php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
 
 # =====================================
-# Update Doctrine Schema
+# (Optional) Update Doctrine Schema
 # =====================================
 # php bin/console doctrine:schema:update --force
 
 # =====================================
-# Configure Nginx for Symfony with Production Optimizations
+# Configure Nginx for Symfony using HTTP only
 # =====================================
-cat <<EOF > /etc/nginx/conf.d/linkuy_connect_services.conf
+cat <<'EOF' > /etc/nginx/conf.d/linkuy_connect_services.conf
 server {
     listen 80;
     server_name _;
     root /var/www/linkuy_connect_services/public;
     index index.php index.html;
+
+    # Disable HTTP header disclosure
+    server_tokens off;
+    proxy_pass_header Server;
 
     # Enable gzip compression for improved performance
     gzip on;
@@ -146,15 +154,16 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 
     location / {
-        try_files \$uri /index.php\$is_args\$args;
+        try_files $uri /index.php$is_args$args;
     }
 
     location ~ ^/index\.php(/|$) {
         fastcgi_pass unix:/run/php-fpm/www.sock;
         fastcgi_split_path_info ^(.+\.php)(/.*)$;
         include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-        fastcgi_param DOCUMENT_ROOT \$realpath_root;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
     }
 
     location ~ \.php$ {
@@ -170,7 +179,8 @@ EOF
 # Restart and Enable Services
 # =====================================
 systemctl daemon-reexec
-systemctl restart php-fpm nginx
+systemctl restart php-fpm
+systemctl restart nginx
 systemctl enable php-fpm nginx
 
-echo "Symfony + PHP 8.2 + Nginx installed and configured for production."
+echo "Symfony + PHP 8.2 + Nginx installed and configured for production using HTTP only."
