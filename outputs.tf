@@ -1,4 +1,12 @@
 # ==============================
+# Genearl outputs
+# ==============================
+output "aws_region" {
+  value       = var.region
+  description = "AWS Region"
+}
+
+# ==============================
 # Outputs for EC2
 # ==============================
 output "ec2_public_ip" {
@@ -23,6 +31,11 @@ output "rds_instance_arn" {
 output "rds_instance_identifier" {
   description = "The identifier (ID) of the RDS instance"
   value       = module.rds.db_instance_identifier
+}
+
+output "rds_engine_version" {
+  description = "The RDS engine version"
+  value       = module.rds.db_instance_engine_version_actual
 }
 
 # ==============================

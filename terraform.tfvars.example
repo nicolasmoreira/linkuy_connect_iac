@@ -44,17 +44,13 @@ sns_alerts_topic_name = "linkuyconnect-alerts-topic"
 # EC2 Configuration
 # ==============================
 ec2_instance_type = "t2.micro"
-ami_id            = "ami-0c80e2b6ccb9ad6d1"
+ami_id            = "ami-088b41ffb0933423f"
+key_name = "linkuyconnect-key"
 
 # ==============================
 # API Gateway Configuration
 # ==============================
 api_gateway_name = "linkuyconnect-api"
-
-# ==============================
-# Webhook Configuration
-# ==============================
-symfony_webhook_url = "https://your-ec2-instance-url/worker/sqs"
 
 # ==============================
 # Others

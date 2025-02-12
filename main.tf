@@ -74,7 +74,9 @@ resource "aws_security_group" "ec2_sg" {
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
-# ===== RDS Configuration =====
+# ==============================
+# RDS Configuration
+# ==============================
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "6.10.0"
@@ -98,7 +100,9 @@ module "rds" {
   publicly_accessible         = true
 }
 
-# ===== Lambda Configuration =====
+# ==============================
+# Lambda Configuration
+# ==============================
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.16.0"
@@ -178,7 +182,7 @@ module "api_gateway" {
   routes = {
     "POST /activity" = {
       authorization_type = "NONE"
-      api_key_required   = true
+      #api_key_required   = true
 
       integration = {
         type                   = "AWS_PROXY"
@@ -209,4 +213,16 @@ module "ec2_instance" {
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   associate_public_ip_address = true
+  key_name                    = var.key_name
+
+  user_data = templatefile("${path.module}/install.sh", {
+    DB_USERNAME        = var.db_username
+    DB_PASSWORD        = var.db_password
+    DB_NAME            = var.db_name
+    RDS_ENDPOINT       = module.rds.db_instance_endpoint
+    AWS_REGION         = var.region
+    RDS_ENGINE_VERSION = var.rds_engine_version
+    SQS_QUEUE_URL      = module.sqs.queue_url
+    SNS_TOPIC_ARN      = module.sns.topic_arn
+  })
 }

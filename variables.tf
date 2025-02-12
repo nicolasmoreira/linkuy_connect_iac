@@ -139,6 +139,11 @@ variable "ami_id" {
   type        = string
 }
 
+variable "key_name" {
+  description = "Name of .pem key"
+  type        = string
+}
+
 # ==============================
 # IPs Configuration
 # ==============================
@@ -152,13 +157,5 @@ variable "allowed_ips" {
 # ==============================
 variable "api_gateway_name" {
   description = "Name of the API Gateway"
-  type        = string
-}
-
-# ==============================
-# Miscellaneous
-# ==============================
-variable "symfony_webhook_url" {
-  description = "URL for the Symfony webhook worker"
   type        = string
 }
