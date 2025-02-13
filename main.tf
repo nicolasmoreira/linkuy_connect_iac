@@ -87,7 +87,6 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-
 # ===== AWS Caller Identity =====
 data "aws_caller_identity" "current" {}
 
@@ -134,12 +133,13 @@ module "lambda" {
   timeout        = 30
 
   environment_variables = {
-    DB_HOST       = module.rds.db_instance_endpoint
-    DB_NAME       = var.db_name
-    DB_USER       = var.db_username
-    DB_PASS       = var.db_password
-    SQS_QUEUE_URL = module.sqs.queue_url
-    ENVIRONMENT   = var.environment
+    DB_USERNAME        = var.db_username
+    DB_PASSWORD        = var.db_password
+    DB_NAME            = var.db_name
+    RDS_ENDPOINT       = module.rds.db_instance_endpoint
+    RDS_ENGINE_VERSION = var.rds_engine_version
+    SQS_QUEUE_URL      = module.sqs.queue_url
+    ENVIRONMENT        = var.environment
   }
 
   policy_statements = {
@@ -188,6 +188,14 @@ resource "aws_sns_topic_subscription" "http_subscription" {
 # ==============================
 # API Gateway Configuration
 # ==============================
+resource "aws_lambda_permission" "allow_apigw_invoke" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.api_gateway.api_execution_arn}/*"
+}
+
 module "api_gateway" {
   source  = "terraform-aws-modules/apigateway-v2/aws"
   version = "5.2.1"
