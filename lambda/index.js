@@ -3,28 +3,29 @@
 const { Pool } = require("pg");
 const AWS = require("aws-sdk");
 
-// Definir constantes para los tipos de eventos
+// Define event type constants
 const EVENT_TYPES = {
   FALL_DETECTED: "FALL_DETECTED",
   INACTIVITY_ALERT: "INACTIVITY_ALERT",
-  LOCATION_UPDATE: "LOCATION_UPDATE"
+  LOCATION_UPDATE: "LOCATION_UPDATE",
+  EMERGENCY_BUTTON_PRESSED: "EMERGENCY_BUTTON_PRESSED",
 };
 
-// Configuración de AWS SQS
+// AWS SQS Configuration
 const sqs = new AWS.SQS({ region: process.env.AWS_REGION });
 const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL;
 
-// Configuración de la base de datos con `pg.Pool`
+// Database configuration with `pg.Pool`
 const pool = new Pool({
   connectionString: `postgres://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.RDS_ENDPOINT}/${process.env.DB_NAME}`,
   ssl: { rejectUnauthorized: false },
-  max: 10, // Máximo de conexiones simultáneas en el pool
-  idleTimeoutMillis: 30000, // Cierra conexiones inactivas después de 30s
-  connectionTimeoutMillis: 5000, // Tiempo de espera para obtener una conexión
+  max: 10, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30s
+  connectionTimeoutMillis: 5000, // Connection timeout
 });
 
 /**
- * Handler principal de la Lambda
+ * Main Lambda handler
  */
 exports.handler = async (event) => {
   let client;
@@ -32,27 +33,32 @@ exports.handler = async (event) => {
     const payload = JSON.parse(event.body);
     validatePayload(payload);
 
-    client = await pool.connect(); // Obtener una conexión del pool
+    client = await pool.connect(); // Get a client from the pool
     await insertActivityLogData(client, payload);
 
-    if ([EVENT_TYPES.FALL_DETECTED, EVENT_TYPES.INACTIVITY_ALERT].includes(payload.type)) {
+    if (
+      [
+        EVENT_TYPES.FALL_DETECTED,
+        EVENT_TYPES.INACTIVITY_ALERT,
+        EVENT_TYPES.EMERGENCY_BUTTON_PRESSED,
+      ].includes(payload.type)
+    ) {
       await sendToSQS(payload);
     }
 
     return createResponse(200, { message: "Data processed successfully" });
   } catch (error) {
-    console.error("❌ Error processing request:", error);
-    return createResponse(
-      error.statusCode || 500,
-      { error: error.message || "Internal Server Error" }
-    );
+    console.error("Error processing request:", error);
+    return createResponse(error.statusCode || 500, {
+      error: error.message || "Internal Server Error",
+    });
   } finally {
-    if (client) client.release(); // Liberar la conexión de vuelta al pool
+    if (client) client.release(); // Release the client back to the pool
   }
 };
 
 /**
- * Valida el payload de entrada
+ * Validates the input payload
  */
 function validatePayload(payload) {
   const requiredFields = ["user_id", "type", "location"];
@@ -68,7 +74,7 @@ function validatePayload(payload) {
 }
 
 /**
- * Valida que la ubicación tenga latitud y longitud válidas
+ * Validates that location has valid latitude and longitude
  */
 function isValidLocation(location) {
   return (
@@ -83,7 +89,7 @@ function isValidLocation(location) {
 }
 
 /**
- * Inserta los datos de actividad en TimescaleDB usando `pg.Pool`
+ * Inserts activity log data into TimescaleDB using `pg.Pool`
  */
 async function insertActivityLogData(client, payload) {
   try {
@@ -99,19 +105,19 @@ async function insertActivityLogData(client, payload) {
       payload.distance_km || 0,
       payload.location.latitude || null,
       payload.location.longitude || null,
-      payload.location.accuracy || null
+      payload.location.accuracy || null,
     ];
 
     await client.query(query, values);
-    console.log("✅ Data inserted into TimescaleDB");
+    console.log("Data inserted into TimescaleDB");
   } catch (error) {
-    console.error("❌ Error inserting data into TimescaleDB:", error);
+    console.error("Error inserting data into TimescaleDB:", error);
     throw error;
   }
 }
 
 /**
- * Envía eventos de caídas o inactividad a SQS
+ * Sends fall or inactivity events to SQS
  */
 async function sendToSQS(payload) {
   try {
@@ -120,15 +126,15 @@ async function sendToSQS(payload) {
       QueueUrl: SQS_QUEUE_URL,
     };
     await sqs.sendMessage(params).promise();
-    console.log(`✅ Event sent to SQS: ${payload.type}`);
+    console.log(`Event sent to SQS: ${payload.type}`);
   } catch (error) {
-    console.error("❌ Error sending event to SQS:", error);
+    console.error("Error sending event to SQS:", error);
     throw error;
   }
 }
 
 /**
- * Crea una respuesta HTTP
+ * Creates an HTTP response
  */
 function createResponse(statusCode, body) {
   return {
