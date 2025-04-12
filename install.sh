@@ -19,14 +19,16 @@ SNS_TOPIC_ARN="${SNS_TOPIC_ARN}"
 mkdir -p /var/www
 
 # =====================================
-# Install Required Packages
+# Update and Install Required Packages
 # =====================================
 dnf update -y
 dnf install -y \
   php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium \
   unzip git nginx
 
-# Configurar Git para que considere seguro el directorio del repositorio (evita error de "dubious ownership")
+# =====================================
+# Configure Git safe directory
+# =====================================
 git config --global --add safe.directory /var/www/linkuy_connect_services || true
 
 # =====================================
@@ -76,11 +78,19 @@ mkdir -p /var/www/linkuy_connect_services/var
 mkdir -p /var/www/linkuy_connect_services/public
 
 # =====================================
-# Set Correct Permissions
+# Set Correct Permissions for Application Directory
 # =====================================
 chown -R nginx:nginx /var/www/linkuy_connect_services
 chmod -R 775 /var/www/linkuy_connect_services/var
 chmod -R 755 /var/www/linkuy_connect_services/public
+
+# =====================================
+# Adjust permissions for Symfony generated files
+# =====================================
+if [ -f /var/www/linkuy_connect_services/.env.local.php ]; then
+    chown nginx:nginx /var/www/linkuy_connect_services/.env.local.php
+    chmod 644 /var/www/linkuy_connect_services/.env.local.php
+fi
 
 # =====================================
 # Create .env.prod with Production Variables
@@ -116,21 +126,34 @@ export APP_DEBUG=0
 composer dump-env prod
 
 # =====================================
-# Clear and Warm Up Symfony Cache for Production
+# Clear and Warm Up Symfony Cache for Production (executed as nginx)
 # =====================================
-php bin/console cache:clear
-php bin/console cache:warmup
+sudo -u nginx php bin/console cache:clear
+sudo -u nginx php bin/console cache:warmup
 
 # =====================================
-# Install assets and generate JWT keypair
+# Fix permissions for Symfony cache and log directories (if generated)
 # =====================================
-php bin/console assets:install --symlink --relative
-php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
+if [ -d /var/www/linkuy_connect_services/var/cache ]; then
+    chown -R nginx:nginx /var/www/linkuy_connect_services/var/cache
+    chmod -R 775 /var/www/linkuy_connect_services/var/cache
+fi
+
+if [ -d /var/www/linkuy_connect_services/var/log ]; then
+    chown -R nginx:nginx /var/www/linkuy_connect_services/var/log
+    chmod -R 775 /var/www/linkuy_connect_services/var/log
+fi
+
+# =====================================
+# Install assets and generate JWT keypair (executed as nginx)
+# =====================================
+sudo -u nginx php bin/console assets:install --symlink --relative
+sudo -u nginx php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
 
 # =====================================
 # (Optional) Update Doctrine Schema
 # =====================================
-# php bin/console doctrine:schema:update --force
+# sudo -u nginx php bin/console doctrine:schema:update --force
 
 # =====================================
 # Configure Nginx for Symfony using HTTP only
