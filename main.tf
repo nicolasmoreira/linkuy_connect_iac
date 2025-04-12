@@ -45,7 +45,7 @@ resource "aws_security_group" "rds_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ips
   }
 }
 
@@ -67,7 +67,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ips
   }
 
   ingress {
@@ -75,7 +75,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ips
   }
 
   egress {
@@ -83,7 +83,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ips
   }
 }
 
@@ -185,6 +185,27 @@ resource "aws_sns_topic_subscription" "http_subscription" {
   endpoint  = "https://${module.ec2_instance.public_ip}/worker/sqs"
 }
 
+
+resource "aws_iam_policy" "data_processor_sqs_policy" {
+  name        = "data_processor_sqs_policy"
+  description = "Permite a data_processor enviar mensajes a la cola SQS ${var.sqs_queue_name}"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "sqs:SendMessage",
+        Resource = "arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "data_processor_policy_attach" {
+  role       = "data_processor"
+  policy_arn = aws_iam_policy.data_processor_sqs_policy.arn
+}
+
 # ==============================
 # API Gateway Configuration
 # ==============================
@@ -216,9 +237,48 @@ module "api_gateway" {
       }
     }
 
-    "ANY /api/{proxy+}" = {
+    "GET /rest/{proxy+}" = {
       authorization_type = "NONE"
-      target             = "integrations/${aws_apigatewayv2_integration.ec2_integration.id}"
+      integration = {
+        type                   = "HTTP_PROXY"
+        uri                    = "http://${module.ec2_instance.public_ip}/{proxy}"
+        method                 = "GET"
+        payload_format_version = "1.0"
+        timeout_milliseconds   = 29000
+      }
+    }
+
+    "POST /rest/{proxy+}" = {
+      authorization_type = "NONE"
+      integration = {
+        type                   = "HTTP_PROXY"
+        uri                    = "http://${module.ec2_instance.public_ip}/{proxy}"
+        method                 = "POST"
+        payload_format_version = "1.0"
+        timeout_milliseconds   = 29000
+      }
+    }
+
+    "PUT /rest/{proxy+}" = {
+      authorization_type = "NONE"
+      integration = {
+        type                   = "HTTP_PROXY"
+        uri                    = "http://${module.ec2_instance.public_ip}/{proxy}"
+        method                 = "PUT"
+        payload_format_version = "1.0"
+        timeout_milliseconds   = 29000
+      }
+    }
+
+    "DELETE /rest/{proxy+}" = {
+      authorization_type = "NONE"
+      integration = {
+        type                   = "HTTP_PROXY"
+        uri                    = "http://${module.ec2_instance.public_ip}/{proxy}"
+        method                 = "DELETE"
+        payload_format_version = "1.0"
+        timeout_milliseconds   = 29000
+      }
     }
   }
 
@@ -227,21 +287,6 @@ module "api_gateway" {
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["Content-Type", "X-API-Key", "Authorization"]
   }
-}
-
-# Integration for EC2
-resource "aws_apigatewayv2_integration" "ec2_integration" {
-  api_id           = module.api_gateway.api_id
-  integration_type = "HTTP_PROXY"
-  integration_uri  = "http://${module.ec2_instance.public_ip}"
-  integration_method = "ANY"
-}
-
-# Route for EC2 integration
-resource "aws_apigatewayv2_route" "ec2_route" {
-  api_id    = module.api_gateway.api_id
-  route_key = "ANY /api/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.ec2_integration.id}"
 }
 
 # ==============================
