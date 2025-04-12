@@ -215,13 +215,33 @@ module "api_gateway" {
         payload_format_version = "2.0"
       }
     }
+
+    "ANY /api/{proxy+}" = {
+      authorization_type = "NONE"
+      target             = "integrations/${aws_apigatewayv2_integration.ec2_integration.id}"
+    }
   }
 
   cors_configuration = {
     allow_origins = ["*"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
-    allow_headers = ["Content-Type", "X-API-Key"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["Content-Type", "X-API-Key", "Authorization"]
   }
+}
+
+# Integration for EC2
+resource "aws_apigatewayv2_integration" "ec2_integration" {
+  api_id           = module.api_gateway.api_id
+  integration_type = "HTTP_PROXY"
+  integration_uri  = "http://${module.ec2_instance.public_ip}"
+  integration_method = "ANY"
+}
+
+# Route for EC2 integration
+resource "aws_apigatewayv2_route" "ec2_route" {
+  api_id    = module.api_gateway.api_id
+  route_key = "ANY /api/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.ec2_integration.id}"
 }
 
 # ==============================

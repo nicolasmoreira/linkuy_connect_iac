@@ -54,6 +54,11 @@ output "api_gateway_url" {
   value       = "${module.api_gateway.api_endpoint}/default"
 }
 
+output "api_gateway_ec2_url" {
+  description = "The API Gateway endpoint URL for the EC2 worker"
+  value       = "${module.api_gateway.api_endpoint}/api"
+}
+
 # ==============================
 # Outputs for SNS
 # ==============================
