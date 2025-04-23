@@ -181,8 +181,8 @@ resource "aws_sns_topic_subscription" "sqs_subscription" {
 
 resource "aws_sns_topic_subscription" "http_subscription" {
   topic_arn = module.sns.topic_arn
-  protocol  = "https"
-  endpoint  = "https://${module.ec2_instance.public_ip}/worker/sqs"
+  protocol  = "http"
+  endpoint  = "http://${module.ec2_instance.public_ip}/worker/sqs"
 }
 
 
