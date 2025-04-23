@@ -111,7 +111,7 @@ AWS_SNS_TOPIC_ARN="${SNS_TOPIC_ARN}"
 ###< aws ###
 
 ###> symfony/expo-notifier ###
-EXPO_DSN="expo://TOKEN@default"
+EXPO_DSN="expo://${EXPO_TOKEN}@default"
 ###< symfony/expo-notifier ###
 EOF
 

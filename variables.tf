@@ -159,3 +159,11 @@ variable "api_gateway_name" {
   description = "Name of the API Gateway"
   type        = string
 }
+
+# ==============================
+# Others Configuration
+# ==============================
+variable "expo_token" {
+  description = "Expo push token"
+  type        = string
+}

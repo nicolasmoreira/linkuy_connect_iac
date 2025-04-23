@@ -45,7 +45,7 @@ sns_alerts_topic_name = "linkuyconnect-alerts-topic"
 # ==============================
 ec2_instance_type = "t2.micro"
 ami_id            = "ami-088b41ffb0933423f"
-key_name = "linkuyconnect-key"
+key_name          = "linkuyconnect-key"
 
 # ==============================
 # API Gateway Configuration
@@ -53,6 +53,7 @@ key_name = "linkuyconnect-key"
 api_gateway_name = "linkuyconnect-api"
 
 # ==============================
-# Others
+# Others Configuration
 # ==============================
 allowed_ips = ["0.0.0.0/0"]
+expo_token  = "ExponentPushToken[1234567890]"

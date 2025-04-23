@@ -314,5 +314,6 @@ module "ec2_instance" {
     RDS_ENGINE_VERSION = var.rds_engine_version
     SQS_QUEUE_URL      = module.sqs.queue_url
     SNS_TOPIC_ARN      = module.sns.topic_arn
+    EXPO_TOKEN         = var.expo_token
   })
 }
