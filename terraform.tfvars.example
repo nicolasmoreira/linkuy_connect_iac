@@ -56,4 +56,4 @@ api_gateway_name = "linkuyconnect-api"
 # Others Configuration
 # ==============================
 allowed_ips = ["0.0.0.0/0"]
-expo_token  = "ExponentPushToken[1234567890]"
+expo_token  = "xxxxx-xxxxxxxxxxxxxxx"
