@@ -60,14 +60,6 @@ output "api_gateway_ec2_url" {
 }
 
 # ==============================
-# Outputs for SNS
-# ==============================
-output "sns_alerts_topic_arn" {
-  description = "The ARN of the SNS topic for alerts"
-  value       = module.sns.topic_arn
-}
-
-# ==============================
 # Outputs for SQS
 # ==============================
 output "sqs_queue_arn" {

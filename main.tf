@@ -117,6 +117,29 @@ module "rds" {
 }
 
 # ==============================
+# IAM Policy for SQS Access
+# ==============================
+resource "aws_iam_policy" "data_processor_sqs_policy" {
+  name        = "data_processor_sqs_policy"
+  description = "Allows data_processor to send messages to the SQS queue ${var.sqs_queue_name}"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "sqs:SendMessage",
+        Resource = "arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "data_processor_policy_attach" {
+  role       = "data_processor"
+  policy_arn = aws_iam_policy.data_processor_sqs_policy.arn
+}
+
+# ==============================
 # Lambda Configuration
 # ==============================
 module "lambda" {
@@ -161,49 +184,6 @@ module "sqs" {
   name       = var.sqs_queue_name
   create     = true
   fifo_queue = false
-}
-
-# ==============================
-# SNS Configuration
-# ==============================
-module "sns" {
-  source  = "terraform-aws-modules/sns/aws"
-  version = "6.1.2"
-
-  name = var.sns_alerts_topic_name
-}
-
-resource "aws_sns_topic_subscription" "sqs_subscription" {
-  topic_arn = module.sns.topic_arn
-  protocol  = "sqs"
-  endpoint  = module.sqs.queue_arn
-}
-
-resource "aws_sns_topic_subscription" "http_subscription" {
-  topic_arn = module.sns.topic_arn
-  protocol  = "http"
-  endpoint  = "http://${module.ec2_instance.public_ip}/worker/sqs"
-}
-
-
-resource "aws_iam_policy" "data_processor_sqs_policy" {
-  name        = "data_processor_sqs_policy"
-  description = "Permite a data_processor enviar mensajes a la cola SQS ${var.sqs_queue_name}"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = "sqs:SendMessage",
-        Resource = "arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "data_processor_policy_attach" {
-  role       = "data_processor"
-  policy_arn = aws_iam_policy.data_processor_sqs_policy.arn
 }
 
 # ==============================
@@ -306,14 +286,15 @@ module "ec2_instance" {
   key_name                    = var.key_name
 
   user_data = templatefile("${path.module}/install.sh", {
-    DB_USERNAME        = var.db_username
-    DB_PASSWORD        = var.db_password
-    DB_NAME            = var.db_name
-    RDS_ENDPOINT       = module.rds.db_instance_endpoint
-    AWS_REGION         = var.region
-    RDS_ENGINE_VERSION = var.rds_engine_version
-    SQS_QUEUE_URL      = module.sqs.queue_url
-    SNS_TOPIC_ARN      = module.sns.topic_arn
-    EXPO_TOKEN         = var.expo_token
+    DB_USERNAME           = var.db_username
+    DB_PASSWORD           = var.db_password
+    DB_NAME               = var.db_name
+    RDS_ENDPOINT          = module.rds.db_instance_endpoint
+    AWS_REGION            = var.region
+    RDS_ENGINE_VERSION    = var.rds_engine_version
+    SQS_QUEUE_URL         = module.sqs.queue_url
+    EXPO_TOKEN            = var.expo_token
+    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
   })
 }

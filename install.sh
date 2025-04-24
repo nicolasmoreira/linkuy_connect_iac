@@ -11,12 +11,25 @@ DB_USERNAME="${DB_USERNAME}"
 DB_PASSWORD="${DB_PASSWORD}"
 DB_NAME="${DB_NAME}"
 SQS_QUEUE_URL="${SQS_QUEUE_URL}"
-SNS_TOPIC_ARN="${SNS_TOPIC_ARN}"
+EXPO_TOKEN="${EXPO_TOKEN}"
+AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
 
 # =====================================
-# Ensure /var/www exists
+# System Configuration
+# =====================================
+# Define system paths and PHP settings
+APP_DIR="/var/www/linkuy_connect_services"
+LOG_DIR="/var/log"
+PHP_MEMORY_LIMIT="256M"
+PHP_MAX_EXECUTION_TIME="300"
+PHP_MAX_INPUT_VARS="2000"
+
+# =====================================
+# Ensure required directories exist
 # =====================================
 mkdir -p /var/www
+mkdir -p "$LOG_DIR"
 
 # =====================================
 # Update and Install Required Packages
@@ -24,19 +37,63 @@ mkdir -p /var/www
 dnf update -y
 dnf install -y \
   php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium \
-  unzip git nginx
+  unzip git nginx htop python3 python3-pip
+
+# =====================================
+# Install Supervisor using pip
+# =====================================
+pip install supervisor
+mkdir -p /etc/supervisor/conf.d
+echo_supervisord_conf > /etc/supervisor/supervisord.conf
+
+# Add conf.d directory to supervisor config
+cat <<'EOF' >> /etc/supervisor/supervisord.conf
+[include]
+files = /etc/supervisor/conf.d/*.conf
+EOF
+
+# Create supervisor systemd service
+cat <<'EOF' > /usr/lib/systemd/system/supervisord.service
+[Unit]
+Description=Process Monitoring and Control Daemon
+After=rc-local.service nss-user-lookup.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/supervisord -c /etc/supervisor/supervisord.conf
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and enable supervisor
+systemctl daemon-reload
+systemctl enable supervisord
+systemctl start supervisord
 
 # =====================================
 # Configure Git safe directory
 # =====================================
-git config --global --add safe.directory /var/www/linkuy_connect_services || true
+git config --global --add safe.directory "$APP_DIR" || true
 
 # =====================================
 # Configure PHP-FPM for Nginx
 # =====================================
 sed -i 's/^user = .*/user = nginx/g' /etc/php-fpm.d/www.conf
 sed -i 's/^group = .*/group = nginx/g' /etc/php-fpm.d/www.conf
-systemctl enable --now php-fpm
+sed -i 's/^listen = .*/listen = \/run\/php-fpm\/www.sock/g' /etc/php-fpm.d/www.conf
+sed -i 's/^listen.owner = .*/listen.owner = nginx/g' /etc/php-fpm.d/www.conf
+sed -i 's/^listen.group = .*/listen.group = nginx/g' /etc/php-fpm.d/www.conf
+sed -i 's/^listen.mode = .*/listen.mode = 0660/g' /etc/php-fpm.d/www.conf
+
+# =====================================
+# Configure PHP settings
+# =====================================
+sed -i "s/^memory_limit = .*/memory_limit = $PHP_MEMORY_LIMIT/" /etc/php.ini
+sed -i "s/^max_execution_time = .*/max_execution_time = $PHP_MAX_EXECUTION_TIME/" /etc/php.ini
+sed -i "s/^max_input_vars = .*/max_input_vars = $PHP_MAX_INPUT_VARS/" /etc/php.ini
+sed -i 's/^;date.timezone =.*/date.timezone = UTC/' /etc/php.ini
+sed -i 's/^expose_php = On/expose_php = Off/' /etc/php.ini
 
 # =====================================
 # Optimize Opcache settings for Production
@@ -47,6 +104,8 @@ if [ -f /etc/php.d/10-opcache.ini ]; then
     sed -i 's/^;opcache.interned_strings_buffer=8/opcache.interned_strings_buffer=8/' /etc/php.d/10-opcache.ini
     sed -i 's/^;opcache.max_accelerated_files=10000/opcache.max_accelerated_files=10000/' /etc/php.d/10-opcache.ini
     sed -i 's/^;opcache.validate_timestamps=1/opcache.validate_timestamps=0/' /etc/php.d/10-opcache.ini
+    sed -i 's/^;opcache.revalidate_freq=2/opcache.revalidate_freq=0/' /etc/php.d/10-opcache.ini
+    sed -i 's/^;opcache.fast_shutdown=0/opcache.fast_shutdown=1/' /etc/php.d/10-opcache.ini
 fi
 
 # =====================================
@@ -74,28 +133,28 @@ composer install --no-dev --optimize-autoloader --no-scripts --no-interaction ||
 # =====================================
 # Ensure required directories exist
 # =====================================
-mkdir -p /var/www/linkuy_connect_services/var
-mkdir -p /var/www/linkuy_connect_services/public
+mkdir -p "$APP_DIR/var"
+mkdir -p "$APP_DIR/public"
 
 # =====================================
 # Set Correct Permissions for Application Directory
 # =====================================
-chown -R nginx:nginx /var/www/linkuy_connect_services
-chmod -R 775 /var/www/linkuy_connect_services/var
-chmod -R 755 /var/www/linkuy_connect_services/public
+chown -R nginx:nginx "$APP_DIR"
+chmod -R 775 "$APP_DIR/var"
+chmod -R 755 "$APP_DIR/public"
 
 # =====================================
 # Adjust permissions for Symfony generated files
 # =====================================
-if [ -f /var/www/linkuy_connect_services/.env.local.php ]; then
-    chown nginx:nginx /var/www/linkuy_connect_services/.env.local.php
-    chmod 644 /var/www/linkuy_connect_services/.env.local.php
+if [ -f "$APP_DIR/.env.local.php" ]; then
+    chown nginx:nginx "$APP_DIR/.env.local.php"
+    chmod 644 "$APP_DIR/.env.local.php"
 fi
 
 # =====================================
 # Create .env.prod with Production Variables
 # =====================================
-cat <<EOF > /var/www/linkuy_connect_services/.env.prod
+cat <<EOF > "$APP_DIR/.env.prod"
 APP_ENV=prod
 APP_DEBUG=0
 
@@ -107,7 +166,8 @@ DATABASE_URL="pgsql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}?s
 AWS_REGION="${AWS_REGION}"
 AWS_SDK_VERSION="latest"
 AWS_SQS_QUEUE_URL="${SQS_QUEUE_URL}"
-AWS_SNS_TOPIC_ARN="${SNS_TOPIC_ARN}"
+AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
 ###< aws ###
 
 ###> symfony/expo-notifier ###
@@ -115,8 +175,8 @@ EXPO_DSN="expo://${EXPO_TOKEN}@default"
 ###< symfony/expo-notifier ###
 EOF
 
-chown nginx:nginx /var/www/linkuy_connect_services/.env.prod
-chmod 600 /var/www/linkuy_connect_services/.env.prod
+chown nginx:nginx "$APP_DIR/.env.prod"
+chmod 600 "$APP_DIR/.env.prod"
 
 # =====================================
 # Set Production Environment Variables and Prepare Environment File
@@ -134,14 +194,14 @@ sudo -u nginx php bin/console cache:warmup
 # =====================================
 # Fix permissions for Symfony cache and log directories (if generated)
 # =====================================
-if [ -d /var/www/linkuy_connect_services/var/cache ]; then
-    chown -R nginx:nginx /var/www/linkuy_connect_services/var/cache
-    chmod -R 775 /var/www/linkuy_connect_services/var/cache
+if [ -d "$APP_DIR/var/cache" ]; then
+    chown -R nginx:nginx "$APP_DIR/var/cache"
+    chmod -R 775 "$APP_DIR/var/cache"
 fi
 
-if [ -d /var/www/linkuy_connect_services/var/log ]; then
-    chown -R nginx:nginx /var/www/linkuy_connect_services/var/log
-    chmod -R 775 /var/www/linkuy_connect_services/var/log
+if [ -d "$APP_DIR/var/log" ]; then
+    chown -R nginx:nginx "$APP_DIR/var/log"
+    chmod -R 775 "$APP_DIR/var/log"
 fi
 
 # =====================================
@@ -151,9 +211,32 @@ sudo -u nginx php bin/console assets:install --symlink --relative
 sudo -u nginx php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
 
 # =====================================
-# (Optional) Update Doctrine Schema
+# Configure PHP Memory Limit and Supervisor
 # =====================================
-# sudo -u nginx php bin/console doctrine:schema:update --force
+# Create Supervisor configuration for SQS message processor
+cat <<'EOF' > /etc/supervisor/conf.d/sqs-processor.conf
+[program:sqs-processor]
+command=php -d memory_limit=256M /var/www/linkuy_connect_services/bin/console app:process-sqs-messages
+directory=/var/www/linkuy_connect_services
+user=nginx
+autostart=true
+autorestart=true
+startretries=3
+stderr_logfile=/var/log/sqs-processor.err.log
+stdout_logfile=/var/log/sqs-processor.out.log
+environment=APP_ENV="prod"
+EOF
+
+# Set proper permissions for Supervisor config
+chmod 644 /etc/supervisor/conf.d/sqs-processor.conf
+
+# Create log files and set permissions
+touch "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
+chown nginx:nginx "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
+chmod 644 "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
+
+# Restart supervisor to apply new configuration
+systemctl restart supervisord
 
 # =====================================
 # Configure Nginx for Symfony using HTTP only
@@ -175,6 +258,12 @@ server {
     gzip_proxied any;
     gzip_comp_level 6;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
 
     location / {
         try_files $uri /index.php$is_args$args;
@@ -204,6 +293,25 @@ EOF
 systemctl daemon-reexec
 systemctl restart php-fpm
 systemctl restart nginx
-systemctl enable php-fpm nginx
+systemctl restart supervisord
+systemctl enable php-fpm nginx supervisord
+
+# =====================================
+# Verify Services Status
+# =====================================
+if ! systemctl is-active --quiet php-fpm; then
+    echo "Error: PHP-FPM service is not running"
+    exit 1
+fi
+
+if ! systemctl is-active --quiet nginx; then
+    echo "Error: Nginx service is not running"
+    exit 1
+fi
+
+if ! systemctl is-active --quiet supervisord; then
+    echo "Error: Supervisor service is not running"
+    exit 1
+fi
 
 echo "Symfony + PHP 8.2 + Nginx installed and configured for production using HTTP only."

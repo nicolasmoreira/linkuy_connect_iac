@@ -1,9 +1,11 @@
 # ==============================
 # AWS Provider Configuration
 # ==============================
-profile     = "linkuyconnect"
-region      = "us-east-2"
-environment = "dev"
+profile               = "linkuyconnect"
+region                = "us-east-2"
+environment           = "prod"
+aws_access_key_id     = "YOUR_AWS_ACCESS_KEY_ID"
+aws_secret_access_key = "YOUR_AWS_SECRET_ACCESS_KEY"
 
 # ==============================
 # RDS Configuration
@@ -34,11 +36,6 @@ lambda_runtime       = "nodejs22.x"
 sqs_queue_name                 = "linkuyconnect-activity"
 sqs_message_retention_seconds  = 86400
 sqs_visibility_timeout_seconds = 30
-
-# ==============================
-# SNS Topic
-# ==============================
-sns_alerts_topic_name = "linkuyconnect-alerts-topic"
 
 # ==============================
 # EC2 Configuration

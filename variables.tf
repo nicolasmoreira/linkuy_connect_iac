@@ -16,6 +16,17 @@ variable "environment" {
   type        = string
 }
 
+variable "aws_access_key_id" {
+  description = "AWS Access Key ID for EC2 instance"
+  type        = string
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS Secret Access Key for EC2 instance"
+  type        = string
+  sensitive   = true
+}
+
 # ==============================
 # RDS Configuration
 # ==============================
@@ -104,6 +115,7 @@ variable "lambda_runtime" {
 variable "sqs_queue_name" {
   description = "Name of the SQS queue"
   type        = string
+  default     = "linkuyconnect-activity"
 }
 
 variable "sqs_message_retention_seconds" {
@@ -116,14 +128,6 @@ variable "sqs_visibility_timeout_seconds" {
   description = "Visibility timeout for SQS messages in seconds"
   type        = number
   default     = 30
-}
-
-# ==============================
-# SNS Topic Configuration
-# ==============================
-variable "sns_alerts_topic_name" {
-  description = "Name of the SNS Topic"
-  type        = string
 }
 
 # ==============================
