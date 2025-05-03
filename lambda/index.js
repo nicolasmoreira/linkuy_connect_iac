@@ -89,7 +89,7 @@ function isValidLocation(location) {
 }
 
 /**
- * Inserts activity log data into TimescaleDB using `pg.Pool`
+ * Inserts activity log data using `pg.Pool`
  */
 async function insertActivityLogData(client, payload) {
   try {
@@ -109,9 +109,9 @@ async function insertActivityLogData(client, payload) {
     ];
 
     await client.query(query, values);
-    console.log("Data inserted into TimescaleDB");
+    console.log("Data inserted");
   } catch (error) {
-    console.error("Error inserting data into TimescaleDB:", error);
+    console.error("Error inserting data:", error);
     throw error;
   }
 }

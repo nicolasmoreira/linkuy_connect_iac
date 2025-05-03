@@ -33,7 +33,7 @@ resource "aws_security_group" "rds_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "PostgreSQL port for TimescaleDB"
+    description = "PostgreSQL port"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"

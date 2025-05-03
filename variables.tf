@@ -76,11 +76,6 @@ variable "db_password" {
   sensitive   = true
 }
 
-variable "db_parameter_group_name" {
-  description = "Name of the RDS parameter group"
-  type        = string
-}
-
 variable "db_encryption_enabled" {
   description = "If true, enables encryption on the RDS instance"
   type        = bool

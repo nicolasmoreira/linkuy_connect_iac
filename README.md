@@ -11,7 +11,7 @@ LinkuyConnect is an open-source project designed to enable families to easily se
 ### AWS Services Used
 
 - **VPC**: Default VPC and subnets with custom security groups
-- **RDS**: Managed PostgreSQL instance with TimescaleDB extensions
+- **RDS**: Managed PostgreSQL instance
 - **Lambda**: Serverless functions for data processing
 - **SQS**: Message queuing service for async processing
 - **API Gateway**: HTTP API for frontend-backend communication
@@ -81,7 +81,7 @@ LinkuyConnect is an open-source project designed to enable families to easily se
 
 6. **Access Resources**
    - **API Gateway**: Access endpoints via the generated API Gateway URL
-   - **RDS**: Connect to the TimescaleDB instance using the provided credentials
+   - **RDS**: Connect to the DB
    - **SQS**: Verify message processing via the configured queue
    - **EC2**: Access the worker instance for processing SQS messages
 

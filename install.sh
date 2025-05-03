@@ -186,6 +186,16 @@ export APP_DEBUG=0
 composer dump-env prod
 
 # =====================================
+# Run Doctrine Migrations
+# =====================================
+echo "Running database migrations..."
+sudo -u nginx php bin/console doctrine:migrations:migrate --no-interaction
+if [ $? -ne 0 ]; then
+    echo "Error: Database migrations failed"
+    exit 1
+fi
+
+# =====================================
 # Clear and Warm Up Symfony Cache for Production (executed as nginx)
 # =====================================
 sudo -u nginx php bin/console cache:clear
@@ -235,8 +245,44 @@ touch "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
 chown nginx:nginx "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
 chmod 644 "$LOG_DIR/sqs-processor.err.log" "$LOG_DIR/sqs-processor.out.log"
 
-# Restart supervisor to apply new configuration
-systemctl restart supervisord
+# Create systemd service for senior inactivity check
+cat <<'EOF' > /etc/systemd/system/senior-inactivity.service
+[Unit]
+Description=Senior Inactivity Check Service
+After=network.target
+
+[Service]
+Type=simple
+User=nginx
+ExecStart=/usr/bin/php -d memory_limit=256M /var/www/linkuy_connect_services/bin/console app:check-senior-inactivity
+StandardOutput=append:/var/log/senior-inactivity.log
+StandardError=append:/var/log/senior-inactivity.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create systemd timer for senior inactivity check
+cat <<'EOF' > /etc/systemd/system/senior-inactivity.timer
+[Unit]
+Description=Run Senior Inactivity Check every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+Unit=senior-inactivity.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# Set proper permissions for systemd files
+chmod 644 /etc/systemd/system/senior-inactivity.service
+chmod 644 /etc/systemd/system/senior-inactivity.timer
+
+# Create and set permissions for the log file
+touch /var/log/senior-inactivity.log
+chown nginx:nginx /var/log/senior-inactivity.log
+chmod 644 /var/log/senior-inactivity.log
 
 # =====================================
 # Configure Nginx for Symfony using HTTP only
@@ -288,30 +334,37 @@ server {
 EOF
 
 # =====================================
-# Restart and Enable Services
+# Start and Enable All Services
 # =====================================
-systemctl daemon-reexec
-systemctl restart php-fpm
-systemctl restart nginx
+# Reload systemd to recognize new services
+systemctl daemon-reload
+
+# Enable and start services
+systemctl enable senior-inactivity.timer
+systemctl start senior-inactivity.timer
 systemctl restart supervisord
-systemctl enable php-fpm nginx supervisord
+systemctl restart nginx
+systemctl restart php-fpm
 
-# =====================================
-# Verify Services Status
-# =====================================
-if ! systemctl is-active --quiet php-fpm; then
-    echo "Error: PHP-FPM service is not running"
-    exit 1
-fi
-
-if ! systemctl is-active --quiet nginx; then
-    echo "Error: Nginx service is not running"
+# Verify all services are running
+if ! systemctl is-active --quiet senior-inactivity.timer; then
+    echo "Error: senior-inactivity.timer failed to start"
     exit 1
 fi
 
 if ! systemctl is-active --quiet supervisord; then
-    echo "Error: Supervisor service is not running"
+    echo "Error: supervisord failed to start"
     exit 1
 fi
 
-echo "Symfony + PHP 8.2 + Nginx installed and configured for production using HTTP only."
+if ! systemctl is-active --quiet nginx; then
+    echo "Error: nginx failed to start"
+    exit 1
+fi
+
+if ! systemctl is-active --quiet php-fpm; then
+    echo "Error: php-fpm failed to start"
+    exit 1
+fi
+
+echo "All services started successfully"

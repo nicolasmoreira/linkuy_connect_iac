@@ -19,7 +19,6 @@ db_family               = "postgres16"
 db_name                 = "linkuyconnect"
 db_username             = "linkuyconnect"
 db_password             =
-db_parameter_group_name = "linkuyconnect-timescaledb-pg"
 db_encryption_enabled   = false
 
 # ==============================
