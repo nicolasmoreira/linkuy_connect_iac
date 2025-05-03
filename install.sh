@@ -36,7 +36,7 @@ mkdir -p "$LOG_DIR"
 # =====================================
 dnf update -y
 dnf install -y \
-  php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium \
+  php-cli php-fpm php-pgsql php-pdo php-mbstring php-xml php-bcmath php-curl php-sodium php-intl \
   unzip git nginx htop python3 python3-pip
 
 # =====================================
