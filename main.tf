@@ -282,7 +282,7 @@ module "ec2_instance" {
   subnet_id              = data.aws_subnets.default.ids[0]
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
-  associate_public_ip_address = false
+  associate_public_ip_address = true
   key_name                    = var.key_name
 
   user_data = templatefile("${path.module}/install.sh", {
