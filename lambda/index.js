@@ -6,7 +6,6 @@ const AWS = require("aws-sdk");
 // Define event type constants
 const EVENT_TYPES = {
   FALL_DETECTED: "FALL_DETECTED",
-  INACTIVITY_ALERT: "INACTIVITY_ALERT",
   LOCATION_UPDATE: "LOCATION_UPDATE",
   EMERGENCY_BUTTON_PRESSED: "EMERGENCY_BUTTON_PRESSED",
 };
@@ -39,7 +38,6 @@ exports.handler = async (event) => {
     if (
       [
         EVENT_TYPES.FALL_DETECTED,
-        EVENT_TYPES.INACTIVITY_ALERT,
         EVENT_TYPES.EMERGENCY_BUTTON_PRESSED,
       ].includes(payload.type)
     ) {
@@ -117,7 +115,7 @@ async function insertActivityLogData(client, payload) {
 }
 
 /**
- * Sends fall or inactivity events to SQS
+ * Sends fall events to SQS
  */
 async function sendToSQS(payload) {
   try {
